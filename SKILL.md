@@ -1,137 +1,120 @@
 ---
 name: github-repo-professionalizer
-description: Analyze an existing, already-developed (possibly already-pushed) Git repository and professionalize it - evidence-based README, docs, .gitignore, .env.example, GitHub templates/CI, cleanup, changelog from real history - without rewriting Git history. Use whenever the user wants to polish, document, clean up, audit, or make a repo portfolio-ready or GitHub-ready, asks for a README, architecture or API docs, or invokes /repo-professionalize, even if they don't say "skill". Modes - --analyze, --plan, --apply, --portfolio, --github, --full.
+description: Turn an existing, already-developed (possibly already-pushed) Git repository into a professionally documented, portfolio-ready project. Core strength is evidence-based README generation - repository profiling, reading the actual code, auditing and correcting an existing README, architecture diagrams, tech-stack roles, verified install/usage, limitations - plus supporting docs/, .gitignore, .env.example, GitHub templates/CI, and secret checks, without rewriting Git history. Use whenever the user wants a README written or improved, wants a repo polished, documented, cleaned up, audited, made portfolio-ready or GitHub-ready, or invokes /repo-professionalize, even if they don't say "skill". Modes - --analyze, --plan, --apply, --portfolio, --github, --full.
 ---
 
 # GitHub Repo Professionalizer
 
-Turns an existing repository into a clean, accurate, portfolio-ready one. Everything written must be backed by evidence in the repo. History is never rewritten.
+Builds a repository-understanding and documentation pipeline, not a prettier template. The README is the highest-priority output; everything else supports it. All content must be traceable to evidence in the repo. Git history is never rewritten.
 
 ## Invocation
 
-`/repo-professionalize [path] [mode]` (path defaults to the current directory). Natural-language requests work too.
+`/repo-professionalize [path] [mode]` (path defaults to the current directory). Plain-language requests also trigger it. (In Claude Code the slash command is derived from the skill's folder/name; to get exactly `/repo-professionalize`, rename the skill folder and `name` field.)
 
-| Mode | Behavior | Modifies repo? |
+| Mode | Behavior | Writes? |
 |---|---|---|
-| `--analyze` | Inspect and report only | No |
-| `--plan` | Analyze, then propose a concrete change list | No |
-| `--apply` | Apply a plan the user has approved | Yes |
-| `--portfolio` | Optimize for recruiters, professors, visitors (see `references/portfolio-mode.md`) | After approval |
-| `--github` | Metadata, templates, workflows, releases (see `references/github-metadata.md`) | After approval |
-| `--full` | Analyze, plan, apply, validate, commit, optionally push | After approval |
+| *(none)* | Analyze, Plan, **ask approval**, Apply, Validate | after approval |
+| `--analyze` | Inspect and report only | no |
+| `--plan` | Analyze, README strategy and change list | no |
+| `--apply` | Apply an approved plan | yes |
+| `--portfolio` | README optimized for recruiters/professors/visitors (`references/PORTFOLIO_README.md`) | after approval |
+| `--github` | Templates, workflows, metadata, releases (`references/github-metadata.md`) | after approval |
+| `--full` | Analyze, Plan, Professionalize, Validate, Commit, optionally Push | after approval |
 
-**Default (no mode):** Analyze, then Plan, then ask for approval, then Apply, then Validate. Do not modify anything before approval unless the user explicitly asked for automatic application (`--full` with "don't ask", "auto", or equivalent).
-
-## Ephemeral Workflows
-
-If you do not want to keep the repository on your laptop:
-
-1. Clone: `git clone <repo-url>`
-2. Work: Run `/repo-professionalize . --full`
-   - Using `--full` is best as it validates, commits, and pushes for you.
-3. Verify: Log into GitHub to verify the changes arrived on the remote.
-4. Delete: `rm -rf <local-repo-path>`
-
-> ⚠️ **Critical Guardrail**
-> NEVER delete the folder until you have verified the professionalized code is pushed to your remote GitHub repository.
->
-> If you run `/repo-professionalize` without `--full`, you must run `git push` manually *after* the skill finishes its `apply` and `commit` phases before you delete the local directory.
+Never modify the repo before approval unless the user explicitly asked for automatic application.
 
 ## Hard rules
 
-1. **Evidence only.** Never invent features, technologies, endpoints, benchmarks, metrics, screenshots, users, stars, integrations or deployment claims. Missing information is written as `TODO`, `Not documented`, `Not currently implemented`, or `Optional`, or asked of the user if essential. Every README claim should trace to a file you read.
-2. **Never rewrite history.** No force push, reset, rebase of published commits, branch deletion, or author rewriting unless the user explicitly asks for it.
-3. **Never expose secrets.** Report secret locations as `file:line (type)` only, never the value. If secrets are found, report them prominently, recommend rotation and history cleanup, and **stop before any push**.
-4. **Don't delete blindly.** Before removing or untracking anything, establish that nothing references it. Prefer `.gitignore` plus `git rm --cached` over deletion, and get approval.
-5. **Don't choose a license silently.** Report none found, list options (MIT, Apache-2.0, GPL-3.0), ask.
-6. **Honest validation.** Only report commands that were actually run. Never say tests passed or a build works unless they did. Report failures plainly.
-7. **Only what fits.** Skip docs, workflows, or README sections that don't apply (no API section without an API).
+1. **Evidence only.** Never invent capabilities, technologies, endpoints, benchmarks, metrics, integrations, screenshots, users, or deployment claims. Gaps are written `TODO`, `Not documented`, `Not currently implemented`, `Optional`, or `(unverified)`, or asked of the user when essential.
+2. **No ledger row, no sentence.** Every README claim must map to a file/line or command output (see evidence ledger in `references/README_METHODOLOGY.md`).
+3. **Never rewrite history.** No `reset --hard`, `push --force`, `--force-with-lease`, rebase of published commits, branch deletion, or author rewriting unless explicitly requested.
+4. **Secrets:** report `file:line (type)` only, never values. If a likely secret is committed, stop before pushing, and recommend rotation, removal from the tree, history cleanup if needed, `.gitignore`, and env vars.
+5. **No blind deletion.** Check references first; prefer `.gitignore` + `git rm --cached` with approval.
+6. **License:** never choose silently; list MIT / Apache-2.0 / GPL-3.0 and ask.
+7. **Honest validation.** Say what was run and what happened. Never claim tests, build, install, or deployment succeeded unless they did.
+8. **Do not preserve false claims.** Correct or flag contradictions between README and code. Do preserve valuable links, examples, screenshots, commands.
 
 ## Workflow
 
-### Phase 1: Analyze (read-only)
-
+### Phase 1: Analyze and profile (read-only)
 ```bash
-bash scripts/analyze-repo.sh <repo>        # stack, git state, docs audit, cleanup candidates, tests/CI
-bash scripts/scan-secrets.sh <repo>        # redacted secret scan, working tree and history filenames
+bash scripts/analyze_repo.sh <repo>
+bash scripts/detect_secrets.sh <repo>
 ```
+The analyzer gives git state, stack, profile signals, declared run commands, routes, data-model hints, TODOs, existing-README inventory, and a README-vs-code claim check. It is a map. **Then read the code** following `references/README_METHODOLOGY.md` section 2: entry points, core pipeline, routes, models, auth, training/inference, tests. You must be able to explain the data flow before writing.
 
-Then read the actual code, not just manifests: entry points, routes, models, config loading, the existing README, tests. Build an internal picture of identity, architecture (frontend, backend, DB, ML pipeline, workers, CLI, infra), dependencies, configuration/env variables (grep the code for `os.environ`, `process.env`, `getenv`, `${...}`), and how to run and test it.
+Classify into one or more profiles using `references/README_PROFILES.md`.
 
-Record git facts: commit count, branches, tags, remote, current branch, whether pushed, commit-message quality. These shape the plan (e.g. CHANGELOG only from real history).
+### Phase 2: Audit existing documentation
+Rate README, install, config, architecture, API, testing, contributing, license, security (present / weak / missing / n/a; format in `references/report-template.md`). For an existing README: build the **preservation inventory** (links, images, commands, examples, history) and run **contradiction detection** (each claim: verified / incorrect / outdated / unclear).
 
-### Phase 2: Documentation audit
-
-Produce a gap table (see format in `references/report-template.md`) covering README, install, configuration, architecture, API, testing, contributing, license, security. Rate each present / needs improvement / missing / not applicable.
-
-### Phase 3: Plan
-
-Choose documents by project type using `references/doc-sets-by-type.md`. Output the plan as:
+### Phase 3: README strategy and plan
+Produce: the evidence ledger, the **README blueprint** (profile, audience, sections, omissions with reasons, docs/ split, open questions), and the change list:
 
 ```
 Changes to be made
 ────────────────────────────
-README.md                  rewrite (evidence: ...)
+README.md                  rewrite (keeps: <links/examples>; fixes: <contradictions>)
 docs/ARCHITECTURE.md       new
-.env.example               new (vars found in src/config.py)
+docs/API.md                new (N endpoints found in app/routes.py)
+.env.example               new (vars: ...)
 .gitignore                 extend
 ```
+Include what you are intentionally not doing and any questions (problem statement, audience, results, screenshots, license). If essential context is missing, ask one concise batch (max 4 questions). Wait for approval.
 
-Include for each item *why*, plus items intentionally **not** done and questions for the user (license, missing screenshots, unverifiable commands). Wait for approval unless auto mode was requested.
+### Phase 4: Generate the README
+Follow `references/README_METHODOLOGY.md` sections 7-9 and `references/README_CHECKLIST.md`. Key points:
+- Structure comes from the blueprint, not a fixed template. Use only relevant sections.
+- Hero: one-line what/for-whom/main tech, truthful badges, visual or recommendation.
+- Problem then Solution for significant projects; How It Works with the real pipeline; Mermaid diagrams with only real components.
+- Tech stack as a table with each technology's role in this repo.
+- Install/config/usage from real project scripts or verified runs; `.env.example` and a config table.
+- Real API endpoints/schemas, model/algorithm details, tests, limitations and roadmap only from evidence. Performance only with sourced numbers, else "Formal benchmarking has not yet been performed."
+- Screenshots only from existing assets; otherwise recommend 2-4 (main interface, key workflow, results, dashboard).
+- Length follows complexity (a small CLI ~100 lines; a complex ML platform 300+ lines plus docs/).
+- `--portfolio`: apply `references/PORTFOLIO_README.md`.
 
-### Phase 4: Apply
+### Phase 5: Strict review (do not skip)
+Run `references/README_REVIEW.md`: reader tests, accuracy re-check, quality tests, scoring. Rewrite weak sections; at least one full revise cycle.
 
-- Work on the current branch, or a new branch if the user prefers a PR-style flow. Record the base commit first: `git rev-parse HEAD`.
-- README: follow `references/readme-guide.md`. Include only sections the evidence supports.
-- `.gitignore`: extend for the actual stack. Never ignore source or required config. Files already tracked need `git rm --cached` (with approval).
-- `.env.example`: variable names found in code, blank or obviously placeholder values, one-line comment each. Never copy real values.
-- Architecture diagrams: Mermaid representing the real components and flows only.
-- API docs: only endpoints found in code. Mark anything uncertain `TODO: verify`.
-- Test docs: only commands you ran or that are declared in the project's own scripts/config.
-- CHANGELOG: derived from real `git log` and tags (Added / Changed / Fixed / Removed / Security). No invented releases.
-- Screenshots: use existing assets only. Otherwise leave a clearly marked `TODO` and tell the user where one would go.
-- Badges: only truthful ones (language, license, version from manifest, CI status if a workflow exists).
-- GitHub templates/workflows: only if they match the project (`references/github-metadata.md`).
+### Phase 6: Supporting docs and repo hygiene
+Move depth into `docs/` (ARCHITECTURE, API, DEVELOPMENT, DEPLOYMENT, MODEL, TRAINING, DATABASE, TROUBLESHOOTING) only where warranted, and link from the README. Then, as appropriate: `.gitignore` (actual stack), `.env.example`, CHANGELOG from real history (Added/Changed/Fixed/Removed/Security; no invented releases), CONTRIBUTING/SECURITY/CODE_OF_CONDUCT for projects that want contributors, and `.github/` templates/workflows that match the real toolchain. See `references/github-metadata.md`.
 
-### Phase 5: Validate
-
+### Phase 7: Validate
 ```bash
-bash scripts/validate.sh <repo> <base-commit>
+git rev-parse HEAD                              # record base commit BEFORE applying
+bash scripts/validate_docs.sh <repo> <base>     # history, deletions, secrets, links, README commands/images/placeholders/generic phrasing/numeric claims/badges
 ```
+Also run the project's real commands (`pytest`, `npm test`, `npm run build`, `mvn test`, `cargo test`, ...) where feasible, and the README's install/run commands where safe. Render or manually review Mermaid. Report failures honestly and separate pre-existing failures from new ones.
 
-Checks: base commit still an ancestor of HEAD (history preserved), no deleted files unintentionally, no secrets or `.env` in the change set, relative markdown links resolve, Mermaid blocks present (syntax check if `mmdc` exists), `git status`. Then run the project's real test/build commands where feasible (`pytest`, `npm test`, `npm run build`, `mvn test`, `cargo test`, ...). Report exactly what ran and what happened.
+### Phase 8: Commit and optional push
+Few logical commits, e.g. `docs: overhaul repository documentation`, `docs: add architecture documentation`, `docs: add API reference`, `chore: improve repository configuration`, `ci: add automated validation`. Show the file list, get approval, commit normally. Do not mix the user's uncommitted work into your commits. Push only on request, normally (never force), after confirming branch, commits, remote, and a clean secret scan.
 
-### Phase 6: Commit and optional push
-
-Group into a few logical commits, never dozens:
-
-```
-docs: rewrite project README
-docs: add architecture documentation
-chore: improve gitignore and add env template
-ci: add project validation workflow
-```
-
-Show the change list, get approval, commit normally. Push only on request: confirm branch, commits and remote first, push normally, never force. Abort if secrets were found.
-
-### Phase 7: Report
-
-Finish with the report from `references/report-template.md`, including **recommended future improvements that were intentionally not done**.
+### Phase 9: Report
+Use `references/report-template.md`. Include contradictions fixed, unverified commands, open TODOs for the user, and recommendations intentionally not performed.
 
 ## Failure handling
-
-- Not a git repo: analyze and document anyway, state that Git checks were skipped, and offer `git init` rather than doing it.
-- Dirty working tree: show it, and do not mix the user's uncommitted work into your commits. Ask how to proceed.
-- Unclear purpose: ask one concise question rather than guess.
-- Tests/build fail before or after your changes: say so, distinguish pre-existing from new, never claim success.
-- No remote or no `gh`: skip GitHub metadata and tell the user the manual steps.
-- Huge repo: sample representative modules, state that the analysis was sampled.
+- Not a git repo: analyze and document; skip git checks; offer `git init`, don't do it.
+- Dirty tree: show it and ask how to proceed.
+- Purpose unclear: ask rather than guess.
+- Failing tests/build: report, distinguish pre-existing from new, never claim success.
+- Large repo: read the core path fully, sample the rest, say so.
+- No `gh`/remote: give manual steps for GitHub metadata.
+- README contradicts code and you are unsure which is right: flag it for the user instead of choosing silently.
 
 ## Examples
-
 ```
 /repo-professionalize ~/projects/ARA_OCR_Final
 /repo-professionalize ~/projects/VOXGUARD --portfolio
 /repo-professionalize ~/projects/beru --analyze
 /repo-professionalize ~/projects/my-project --full
 ```
+
+## References (load as needed)
+- `references/README_METHODOLOGY.md`: the pipeline, evidence ledger, blueprint, writing principles
+- `references/README_PROFILES.md`: per-profile reading order, sections, docs/, traps
+- `references/README_CHECKLIST.md`: gates, section acceptance, anti-patterns
+- `references/README_REVIEW.md`: strict second-pass review
+- `references/PORTFOLIO_README.md`: recruiter/professor-oriented mode
+- `references/github-metadata.md`: templates, CI, `gh` metadata
+- `references/report-template.md`: audit and final report formats
